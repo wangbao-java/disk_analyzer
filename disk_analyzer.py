@@ -796,13 +796,22 @@ class DiskAnalyzerApp:
 
     def _draw_treemap(self, root_node: DirNode):
         """绘制 treemap。"""
-        children = [c for c in root_node.children if c.is_dir]
-        if not children:
-            children = [c for c in root_node.children if not c.is_dir][:50]
+        # 收集所有可见子节点（目录 + 大文件），限制数量避免画布过载
+        all_dirs = [c for c in root_node.children if c.is_dir and c.size > 0]
+        all_files = [c for c in root_node.children if not c.is_dir and c.size > 0]
+
+        # 优先显示目录；文件太多时只取最大的 30 个
+        if all_dirs:
+            children = all_dirs + sorted(all_files, key=lambda f: f.size, reverse=True)[:30]
+        else:
+            children = sorted(all_files, key=lambda f: f.size, reverse=True)[:50]
+
+        # 用实际展示项的总大小——之前用 root_node.size 导致比例错误
+        display_total = sum(c.size for c in children)
 
         renderer = TreemapRenderer(self.treemap_canvas)
-        renderer.draw(children, root_node.size)
-        self.treemap_label.place_forget()  # 移除提示文字
+        renderer.draw(children, display_total)
+        self.treemap_label.place_forget()
 
     def _on_treemap_click(self, event):
         # 保留供将来使用
