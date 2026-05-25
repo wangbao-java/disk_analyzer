@@ -1,37 +1,82 @@
-# disk_analyzer
+# Disk Analyzer - 磁盘空间分析工具
 
-#### 介绍
-window 磁盘分析
+一个跨平台的磁盘空间可视化分析与清理工具，基于 Python + tkinter 构建。
 
-#### 软件架构
-软件架构说明
+## 功能
 
+- **目录扫描** — 多线程快速遍历目录，计算每个文件夹和文件的大小
+- **Treemap 矩形树图** — 彩色矩形块按比例展示空间占比，双击下钻子目录
+- **目录树** — 左侧树形结构，按大小排序，右键打开/删除
+- **大文件 Top 100** — 找出占用空间最大的文件，双击定位
+- **目录膨胀分析** — 找出「许多小文件积累」的大目录，标记高文件数、低平均大小的目录（如 `node_modules`、`.git`、日志目录等）
+- **文件类型统计** — 按扩展名分类，显示各类型占比
+- **垃圾清理扫描** — 自动扫描 13 类系统垃圾（临时文件/缓存/日志）
+- **安全删除** — 右键删除前弹窗确认大小，防止误删
 
-#### 安装教程
+## 环境要求
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+- Python 3.7+
+- tkinter（Windows/macOS 自带，Linux 需安装 `python3-tk`）
 
-#### 使用说明
+Linux 上安装 tkinter：
+```bash
+sudo apt install python3-tk        # Debian/Ubuntu
+sudo dnf install python3-tkinter   # Fedora
+```
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+## 使用方式
 
-#### 参与贡献
+### 直接运行
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+```bash
+python disk_analyzer.py
+```
 
+### Windows 上双击运行
 
-#### 特技
+将 `.py` 文件关联到 Python 后，直接双击 `disk_analyzer.py` 即可启动。
 
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+### 打包成独立 exe（无需安装 Python）
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name DiskAnalyzer disk_analyzer.py
+```
+
+生成 `dist/DiskAnalyzer.exe`，拷贝到任意 Windows 电脑直接运行。
+
+也可以双击 `build_exe.bat` 一键打包。
+
+## 界面说明
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 扫描目录: [C:\__________] [浏览] [▶开始] [⏹停止]        │
+├─────────────────────┬────────────────────────────────────┤
+│ 目录树              │  📊矩形树图 │ 📄大文件 │           │
+│ ├─ Windows   12 GB  │  ┌──┬──────┐                       │
+│ ├─ Users     30 GB  │  │  │      │                       │
+│ ├─ ...              │  └──┴──────┘                       │
+│                     │                                     │
+│                     │  📁文件类型 │ 📂目录膨胀 │ 🧹清理   │
+├─────────────────────┴────────────────────────────────────┤
+│ 扫描完成 | 123,456 项 | 120.5 GB | 耗时 3.2s             │
+└──────────────────────────────────────────────────────────┘
+```
+
+## 各 Tab 说明
+
+| Tab | 功能 |
+|-----|------|
+| 📊 矩形树图 | Treemap 可视化空间占比，双击目录树节点下钻 |
+| 📄 大文件 Top 100 | 按文件大小排序，双击打开所在目录 |
+| 📁 文件类型 | 按扩展名聚合统计，显示各类型占比 |
+| 📂 目录膨胀 | 列出所有子目录，按大小/文件数/子目录数排序，🟠标记"许多小文件"目录 |
+| 🧹 垃圾清理 | 扫描系统临时文件、缓存、日志等可清理项 |
+
+## 注意事项
+
+- 扫描 C 盘或大目录可能需要几十秒，取决于文件数量
+- 扫描时点击"停止"可以随时中断
+- 删除操作为**永久删除**（不经过回收站），操作前会弹出确认对话框
+- 垃圾清理扫描结果仅供查看，实际删除请在确认后手动操作
