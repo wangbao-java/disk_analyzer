@@ -18,8 +18,10 @@ echo [1/3] 安装 PyInstaller...
 pip install pyinstaller
 
 echo.
-echo [2/3] 开始打包...
+echo [2/3] 开始打包（含图标）...
 pyinstaller --onefile --windowed --name DiskAnalyzer ^
+    --icon=app.ico ^
+    --add-data "app.ico;." ^
     --add-data "README.md;." ^
     disk_analyzer.py
 

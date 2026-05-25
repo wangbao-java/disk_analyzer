@@ -1169,6 +1169,14 @@ class DiskAnalyzerApp:
 
 def main():
     root = tk.Tk()
+    # 设置应用图标
+    icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app.ico")
+    if os.path.exists(icon_path):
+        try:
+            root.iconbitmap(icon_path)
+        except Exception:
+            pass  # Linux 可能不支持 .ico
+
     app = DiskAnalyzerApp(root)
     root.mainloop()
 
