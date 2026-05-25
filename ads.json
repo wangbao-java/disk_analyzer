@@ -1,0 +1,29 @@
+[
+    {
+        "id": "ad_001",
+        "title": "🔥 推荐：专业数据恢复工具",
+        "subtitle": "误删文件？格式化硬盘？免费扫描，找到再付费",
+        "url": "https://www.easeus.com/datarecoverywizardpro/",
+        "image": "",
+        "duration": 5,
+        "enabled": true
+    },
+    {
+        "id": "ad_002",
+        "title": "🛡️ 您的电脑安全吗？",
+        "subtitle": "360安全卫士 · 免费杀毒 · 一键清理 · 系统加速",
+        "url": "https://weishi.360.cn/",
+        "image": "",
+        "duration": 5,
+        "enabled": true
+    },
+    {
+        "id": "ad_003",
+        "title": "☁️ 阿里云 · 新用户免费试用",
+        "subtitle": "云服务器 2核4G 低至 ¥0.5/小时，新人首单免费",
+        "url": "https://www.aliyun.com/minisite/goods?userCode=xxxxx",
+        "image": "",
+        "duration": 5,
+        "enabled": true
+    }
+]

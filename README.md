@@ -80,3 +80,59 @@ pyinstaller --onefile --windowed --name DiskAnalyzer disk_analyzer.py
 - 扫描时点击"停止"可以随时中断
 - 删除操作为**永久删除**（不经过回收站），操作前会弹出确认对话框
 - 垃圾清理扫描结果仅供查看，实际删除请在确认后手动操作
+
+## 开屏广告
+
+启动时会展示 5 秒开屏广告窗口，可通过 `ads.json` 完全自定义。
+
+### 广告配置 (ads.json)
+
+```json
+[
+    {
+        "id": "ad_001",
+        "title": "🔥 推荐：专业数据恢复工具",
+        "subtitle": "误删文件？格式化硬盘？免费扫描，找到再付费",
+        "url": "https://www.example.com/product",
+        "image": "",
+        "duration": 5,
+        "enabled": true
+    }
+]
+```
+
+| 字段 | 说明 |
+|------|------|
+| `id` | 广告唯一标识 |
+| `title` | 广告标题（支持 emoji） |
+| `subtitle` | 副标题 / 描述文案 |
+| `url` | 点击跳转链接 |
+| `image` | 广告图片路径（留空则纯文字） |
+| `duration` | 展示秒数 |
+| `enabled` | `true` 启用 / `false` 停用 |
+
+### 如何变现
+
+桌面软件不像手机 App 有统一的广告 SDK，推荐以下方式变现：
+
+| 方式 | 说明 |
+|------|------|
+| **Affiliate 推广** | 在 ads.json 中配置相关软件的推广链接（如数据恢复、杀毒软件），用户点击购买后赚佣金 |
+| **自家产品互推** | 如果你有多个工具，开屏广告互相导流 |
+| **直接出售广告位** | 把广告位卖给相关软件厂商，按展示量/时间收费 |
+| **赞助商展示** | 联系品牌方做冠名赞助 |
+
+### 关闭广告
+
+删除或重命名 `ads.json` 即可跳过开屏广告；也可以将全部广告的 `enabled` 设为 `false`。
+
+## 文件结构
+
+```
+disk-analyzer/
+├── disk_analyzer.py   # 主程序
+├── ads.json           # 广告配置
+├── build_exe.bat      # Windows 打包脚本
+├── .gitignore
+└── README.md
+```

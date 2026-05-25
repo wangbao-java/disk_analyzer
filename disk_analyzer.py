@@ -16,6 +16,7 @@ import os
 import sys
 import stat
 import shutil
+import json
 import threading
 import queue
 import time
@@ -24,6 +25,8 @@ import fnmatch
 import glob
 from pathlib import Path
 from collections import defaultdict
+from random import choice
+from urllib.parse import quote
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # ── GUI imports ──────────────────────────────────────────────
@@ -1140,12 +1143,180 @@ class DiskAnalyzerApp:
 
 
 # ═══════════════════════════════════════════════════════════════
+# 开屏广告 SplashScreen
+# ═══════════════════════════════════════════════════════════════
+
+class SplashScreen:
+    """启动时展示的开屏广告窗口。"""
+
+    AD_CONFIG_PATH = "ads.json"
+
+    def __init__(self, master: tk.Tk, on_complete):
+        self.master = master
+        self.on_complete = on_complete
+        self.ad = self._pick_ad()
+        self.remaining = self.ad.get("duration", 5) if self.ad else 0
+        self._after_id = None
+
+        if self.ad:
+            self._build(master)
+            self._start_countdown()
+        else:
+            # 无广告可用，直接跳过
+            master.after(100, self._finish)
+
+    def _pick_ad(self):
+        """从 ads.json 中随机选一个启用的广告。"""
+        config_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            self.AD_CONFIG_PATH
+        )
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                ads = json.load(f)
+            enabled = [a for a in ads if a.get("enabled", True)]
+            return choice(enabled) if enabled else None
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
+    def _build(self, master):
+        """构建广告窗口 UI。"""
+        self.win = tk.Toplevel(master)
+        self.win.title("")
+        self.win.overrideredirect(True)  # 无边框
+        self.win.attributes("-topmost", True)
+        self.win.configure(bg="#1a1a2e")
+
+        # 窗口大小：屏幕的 55%
+        sw = master.winfo_screenwidth()
+        sh = master.winfo_screenheight()
+        ww = int(sw * 0.55)
+        wh = int(sh * 0.55)
+        x = (sw - ww) // 2
+        y = (sh - wh) // 2
+        self.win.geometry(f"{ww}x{wh}+{x}+{y}")
+
+        # ── 顶部装饰条 ──
+        top_bar = tk.Frame(self.win, bg="#16213e", height=4)
+        top_bar.pack(fill=tk.X)
+        tk.Frame(top_bar, bg="#e94560", height=4, width=ww//3).place(x=0, y=0)
+        tk.Frame(top_bar, bg="#0f3460", height=4, width=ww//3).place(x=ww//3, y=0)
+        tk.Frame(top_bar, bg="#533483", height=4, width=ww//3).place(x=2*ww//3, y=0)
+
+        # ── 主体内容区 ──
+        body = tk.Frame(self.win, bg="#1a1a2e")
+        body.pack(fill=tk.BOTH, expand=True, padx=40, pady=(30, 10))
+
+        # Logo / 标题区域
+        logo_frame = tk.Frame(body, bg="#1a1a2e")
+        logo_frame.pack(pady=(20, 10))
+        tk.Label(logo_frame, text="💾", font=("Segoe UI", 48),
+                 bg="#1a1a2e", fg="#e94560").pack()
+        tk.Label(logo_frame, text="Disk Analyzer",
+                 font=("Segoe UI", 20, "bold"),
+                 bg="#1a1a2e", fg="#ffffff").pack(pady=(5, 0))
+        tk.Label(logo_frame, text="磁盘空间分析工具",
+                 font=("Segoe UI", 10),
+                 bg="#1a1a2e", fg="#888888").pack()
+
+        # ── 广告卡片 ──
+        ad_card = tk.Frame(body, bg="#16213e", highlightbackground="#e94560",
+                           highlightthickness=1, padx=3, pady=3)
+        ad_card.pack(pady=(30, 20), fill=tk.X)
+        ad_card.bind("<Button-1>", lambda e: self._open_ad_url())
+
+        ad_inner = tk.Frame(ad_card, bg="#16213e")
+        ad_inner.pack(fill=tk.X, padx=20, pady=20)
+        ad_inner.bind("<Button-1>", lambda e: self._open_ad_url())
+
+        # 广告标签
+        tk.Label(ad_inner, text="— ADVERTISEMENT —",
+                 font=("Segoe UI", 7), bg="#16213e", fg="#666666").pack(anchor="w")
+        ad_inner.bind("<Button-1>", lambda e: self._open_ad_url())
+
+        # 广告标题
+        title_label = tk.Label(ad_inner, text=self.ad.get("title", ""),
+                               font=("Segoe UI", 16, "bold"),
+                               bg="#16213e", fg="#ffffff",
+                               wraplength=ww - 130, justify="left")
+        title_label.pack(anchor="w", pady=(10, 5))
+        title_label.bind("<Button-1>", lambda e: self._open_ad_url())
+
+        # 广告副标题
+        sub_label = tk.Label(ad_inner, text=self.ad.get("subtitle", ""),
+                             font=("Segoe UI", 10),
+                             bg="#16213e", fg="#aaaaaa",
+                             wraplength=ww - 130, justify="left")
+        sub_label.pack(anchor="w")
+        sub_label.bind("<Button-1>", lambda e: self._open_ad_url())
+
+        # 点击提示
+        hint = tk.Label(ad_inner, text="👆 点击了解更多",
+                        font=("Segoe UI", 8),
+                        bg="#16213e", fg="#e94560")
+        hint.pack(anchor="w", pady=(10, 0))
+        hint.bind("<Button-1>", lambda e: self._open_ad_url())
+
+        # ── 底部控制栏 ──
+        bottom = tk.Frame(self.win, bg="#1a1a2e")
+        bottom.pack(fill=tk.X, padx=40, pady=(0, 20))
+
+        self.countdown_label = tk.Label(
+            bottom, text=f"{self.remaining} 秒后自动进入",
+            font=("Segoe UI", 9), bg="#1a1a2e", fg="#888888"
+        )
+        self.countdown_label.pack(side=tk.LEFT)
+
+        skip_btn = tk.Button(bottom, text=f"跳过 ({self.remaining}s)",
+                             font=("Segoe UI", 9),
+                             bg="#e94560", fg="#ffffff", relief="flat",
+                             activebackground="#c73650",
+                             command=self._finish,
+                             cursor="hand2")
+        skip_btn.pack(side=tk.RIGHT)
+
+    def _start_countdown(self):
+        if self.remaining <= 0:
+            self._finish()
+            return
+        self.countdown_label.config(text=f"{self.remaining} 秒后自动进入")
+        self._after_id = self.master.after(1000, self._tick)
+
+    def _tick(self):
+        self.remaining -= 1
+        if self.remaining <= 0:
+            self._finish()
+        else:
+            self._start_countdown()
+
+    def _open_ad_url(self):
+        """在浏览器中打开广告链接。"""
+        url = self.ad.get("url", "")
+        if url:
+            import webbrowser
+            webbrowser.open(url)
+
+    def _finish(self):
+        if self._after_id:
+            self.master.after_cancel(self._after_id)
+        if hasattr(self, "win"):
+            self.win.destroy()
+        self.on_complete()
+
+
+# ═══════════════════════════════════════════════════════════════
 # 入口
 # ═══════════════════════════════════════════════════════════════
 
 def main():
     root = tk.Tk()
-    app = DiskAnalyzerApp(root)
+    root.withdraw()  # 先隐藏主窗口
+
+    def launch_app():
+        root.deiconify()  # 显示主窗口
+        DiskAnalyzerApp(root)
+
+    SplashScreen(root, on_complete=launch_app)
     root.mainloop()
 
 
