@@ -312,99 +312,114 @@ class CleanupScanner:
 # ═══════════════════════════════════════════════════════════════
 
 class TreemapRenderer:
-    """Treemap 矩形图渲染器，在 tkinter Canvas 上绘制。"""
+    """Treemap 矩形图渲染器，在 tkinter Canvas 上绘制。使用水平条带布局。"""
 
-    COLORS = [
+    COLORS = (
         "#3498db", "#2ecc71", "#e74c3c", "#f39c12", "#9b59b6",
         "#1abc9c", "#e67e22", "#2980b9", "#27ae60", "#c0392b",
         "#d35400", "#8e44ad", "#16a085", "#f1c40f", "#7f8c8d",
         "#34495e", "#e91e63", "#00bcd4", "#ff5722", "#795548",
-    ]
+    )
 
     def __init__(self, canvas: tk.Canvas):
         self.canvas = canvas
-        self._nodes = []
+        self._rects = []  # (node, x1, y1, x2, y2) for hit testing
         self._color_map = {}
 
     def draw(self, nodes: list[DirNode], total_size: int):
-        """绘制 treemap。nodes 应为子节点列表。"""
+        """绘制 treemap。水平条带布局，每个子目录一行，宽度按比例。"""
         self.canvas.delete("all")
-        self._nodes = nodes
-        w = self.canvas.winfo_width() or 600
-        h = self.canvas.winfo_height() or 400
+        self._rects = []
+        w = max(self.canvas.winfo_width(), 50) or 600
+        h = max(self.canvas.winfo_height(), 50) or 400
         if w < 20 or h < 20:
             return
 
+        if not nodes or total_size <= 0:
+            return
+
+        # 筛选有效节点并排序（大到小）
+        valid = [(n, n.size) for n in nodes if n.size > 0]
+        if not valid:
+            return
+        valid.sort(key=lambda t: t[1], reverse=True)
+
+        # 如果节点太多，把小项合并为"其他"
+        MAX_STRIPS = 40
+        if len(valid) > MAX_STRIPS:
+            main = valid[:MAX_STRIPS - 1]
+            rest_size = sum(sz for _, sz in valid[MAX_STRIPS - 1:])
+            rest_count = len(valid) - MAX_STRIPS + 1
+            if rest_size > 0:
+                other_node = DirNode(f"其他 {rest_count} 项", "", True)
+                other_node.size = rest_size
+                main.append((other_node, rest_size))
+            valid = main
+
+        # 水平条带布局：从上到下依次排列
         pad = 2
-        rects = self._layout_slice_and_dice(
-            [(n, n.size) for n in nodes if n.size > 0],
-            0, 0, w - pad, h - pad, total_size
-        )
+        cy = pad
+        content_h = h - pad * 2
+        content_w = w - pad * 2
 
-        for i, (node, x, y, rw, rh) in enumerate(rects):
-            if rw <= 4 or rh <= 4:
-                continue
+        # 计算可用高度，按比例分配，最小 6px
+        avail_h = content_h
+        for node, size in valid:
+            strip_h = int((size / total_size) * content_h)  # 严格按比例
+            if cy + strip_h > h - pad:
+                strip_h = h - pad - cy
+                if strip_h < 4:
+                    break
+
+            x1, y1 = pad, cy
+            x2, y2 = w - pad, cy + strip_h
+
+            # 绘制条带矩形
             color = self._get_color(node)
-            self.canvas.create_rectangle(x, y, x + rw, y + rh,
-                                         fill=color, outline="#fff", width=1)
-            # 标签
-            if rw > 30 and rh > 16:
-                label = node.name[:20]
-                size_str = format_size(node.size)
+            darker = self._darken(color, 0.85)
+            self.canvas.create_rectangle(
+                x1, y1, x2, y2,
+                fill=color, outline="#1a1a2e", width=1
+            )
+            # 顶部高光线
+            self.canvas.create_line(x1 + 1, y1 + 1, x2 - 1, y1 + 1,
+                                    fill=darker, width=1)
+
+            self._rects.append((node, x1, y1, x2, y2))
+
+            # 标签：名称 + 大小 + 占比
+            label = node.name[:30]
+            pct = (size / total_size) * 100
+            text = f"{label}  ─  {format_size(size)}  ({pct:.1f}%)"
+            font_size = 10 if strip_h > 24 else 8
+            if strip_h >= 12:
                 self.canvas.create_text(
-                    x + rw / 2, y + rh / 2 - 6,
-                    text=label, fill="white", font=("Segoe UI", 9, "bold"),
-                    anchor="center", width=rw - 8
-                )
-                self.canvas.create_text(
-                    x + rw / 2, y + rh / 2 + 8,
-                    text=size_str, fill="rgba(255,255,255,0.8)",
-                    font=("Segoe UI", 7), anchor="center"
+                    x1 + 10, y1 + strip_h / 2,
+                    text=text, fill="#ffffff", font=("Segoe UI", font_size, "bold"),
+                    anchor="w"
                 )
 
-    def _layout_slice_and_dice(self, items, x, y, w, h, total):
-        """Slice-and-dice treemap 布局算法。简单可靠。"""
-        if not items or total <= 0 or w <= 0 or h <= 0:
-            return []
+            cy += strip_h
 
-        items = sorted(items, key=lambda t: t[1], reverse=True)
-        result = []
-        cx, cy = x, y
-        rw, rh = w, h
-        remaining = total
-
-        for node, size in items:
-            if size <= 0:
-                continue
-            if rw > rh:
-                slice_w = max(1, (size / remaining) * rw)
-                result.append((node, cx, cy, slice_w, rh))
-                cx += slice_w
-                rw -= slice_w
-            else:
-                slice_h = max(1, (size / remaining) * rh)
-                result.append((node, cx, cy, rw, slice_h))
-                cy += slice_h
-                rh -= slice_h
-            remaining -= size
-
-        return result
+    def _darken(self, hex_color, factor):
+        """将十六进制颜色变暗。"""
+        hex_color = hex_color.lstrip("#")
+        r = int(int(hex_color[0:2], 16) * factor)
+        g = int(int(hex_color[2:4], 16) * factor)
+        b = int(int(hex_color[4:6], 16) * factor)
+        return f"#{r:02x}{g:02x}{b:02x}"
 
     def _get_color(self, node) -> str:
-        key = node.name[:2].lower() if node else "??"
-        if key not in self._color_map:
-            self._color_map[key] = self.COLORS[hash(key) % len(self.COLORS)]
-        return self._color_map[key]
+        if node not in self._color_map:
+            idx = hash(node.name) % len(self.COLORS)
+            self._color_map[node] = self.COLORS[idx]
+        return self._color_map[node]
 
     def get_node_at(self, x, y) -> DirNode | None:
-        """根据坐标查找对应的节点（基于最后一次绘制的布局）。"""
-        # 简化实现：遍历所有矩形
-        items = self.canvas.find_all()
-        closest = self.canvas.find_closest(x, y)
-        if closest:
-            idx = items.index(closest[0]) if closest else -1
-            if 0 <= idx < len(self._nodes):
-                return self._nodes[idx]
+        """根据坐标查找对应的节点。"""
+        for node, x1, y1, x2, y2 in self._rects:
+            if x1 <= x <= x2 and y1 <= y <= y2:
+                return node
         return None
 
 
