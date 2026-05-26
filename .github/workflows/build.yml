@@ -1,0 +1,36 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+  workflow_dispatch:        # 允许手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安装 PyInstaller
+        run: pip install pyinstaller
+
+      - name: 打包 EXE
+        run: |
+          pyinstaller --onefile --windowed --name DiskAnalyzer `
+            --icon=app.ico `
+            --add-data "app.ico;." `
+            --add-data "README.md;." `
+            disk_analyzer.py
+
+      - name: 上传制品
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiskAnalyzer-Windows
+          path: dist/DiskAnalyzer.exe
