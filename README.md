@@ -1,84 +1,86 @@
-[English](README.en.md) | 简体中文
+English | [简体中文](README.zh.md)
 
-# Disk Analyzer - 磁盘空间分析工具
+# Disk Analyzer — Disk Space Visualization Tool
 
-一个跨平台的磁盘空间可视化分析与清理工具，基于 Python + tkinter 构建。
+A cross-platform disk space analysis and cleanup tool built with Python + tkinter.
 
-## 功能
+## Features
 
-- **目录扫描** — 多线程快速遍历目录，计算每个文件夹和文件的大小
-- **Treemap 矩形树图** — 彩色矩形块按比例展示空间占比，双击下钻子目录
-- **目录树** — 左侧树形结构，按大小排序，右键打开/删除
-- **大文件 Top 100** — 找出占用空间最大的文件，双击定位
-- **目录膨胀分析** — 找出「许多小文件积累」的大目录，标记高文件数、低平均大小的目录（如 `node_modules`、`.git`、日志目录等）
-- **文件类型统计** — 按扩展名分类，显示各类型占比
-- **垃圾清理扫描** — 自动扫描 13 类系统垃圾（临时文件/缓存/日志）
-- **安全删除** — 右键删除前弹窗确认大小，防止误删
+- **Directory Scanning** — Multi-threaded recursive scanning with real-time progress
+- **Treemap Visualization** — Color-coded rectangles proportional to disk usage; double-click to drill down
+- **Directory Tree** — Sortable tree view, right-click to open in Explorer or delete
+- **Top 100 Largest Files** — Find the biggest space hogs instantly
+- **Directory Bloat Analysis** — Spot directories with many small files (e.g. `node_modules`, `.git`, log dirs)
+- **File Type Breakdown** — Aggregate by extension with percentage bars
+- **Junk Cleanup Scanner** — Auto-detect 13 categories of system junk (temp files, caches, logs)
+- **Safe Delete** — Confirmation dialog with size preview before permanent deletion
 
-## 环境要求
+## Requirements
 
 - Python 3.7+
-- tkinter（Windows/macOS 自带，Linux 需安装 `python3-tk`）
+- tkinter (bundled with Python on Windows/macOS; on Linux install `python3-tk`)
 
-Linux 上安装 tkinter：
 ```bash
+# Linux only
 sudo apt install python3-tk        # Debian/Ubuntu
 sudo dnf install python3-tkinter   # Fedora
 ```
 
-## 使用方式
+## Quick Start
 
-### 直接运行
+### Run directly
 
 ```bash
 python disk_analyzer.py
 ```
 
-### Windows 上双击运行
+### Windows executable (no Python required)
 
-将 `.py` 文件关联到 Python 后，直接双击 `disk_analyzer.py` 即可启动。
+Download the latest `DiskAnalyzer.exe` from [GitHub Releases](https://github.com/wangbao-java/disk_analyzer/releases).
 
-### 打包成独立 exe（无需安装 Python）
+Or build it yourself:
 
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name DiskAnalyzer disk_analyzer.py
+pyinstaller --onefile --windowed --name DiskAnalyzer --icon=app.ico disk_analyzer.py
 ```
 
-生成 `dist/DiskAnalyzer.exe`，拷贝到任意 Windows 电脑直接运行。
+On Windows, just double-click `build_exe.bat`.
 
-也可以双击 `build_exe.bat` 一键打包。
-
-## 界面说明
+## Interface
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ 扫描目录: [C:\__________] [浏览] [▶开始] [⏹停止]        │
+│ Scan: [C:\__________] [Browse] [▶ Start] [⏹ Stop]       │
 ├─────────────────────┬────────────────────────────────────┤
-│ 目录树              │  📊矩形树图 │ 📄大文件 │           │
+│ Directory Tree      │  📊 Treemap │ 📄 Big Files │       │
 │ ├─ Windows   12 GB  │  ┌──┬──────┐                       │
 │ ├─ Users     30 GB  │  │  │      │                       │
 │ ├─ ...              │  └──┴──────┘                       │
 │                     │                                     │
-│                     │  📁文件类型 │ 📂目录膨胀 │ 🧹清理   │
+│                     │  📁 File Types │ 📂 Bloat │ 🧹 Junk│
 ├─────────────────────┴────────────────────────────────────┤
-│ 扫描完成 | 123,456 项 | 120.5 GB | 耗时 3.2s             │
+│ Scan complete | 123,456 items | 120.5 GB | 3.2 s         │
 └──────────────────────────────────────────────────────────┘
 ```
 
-## 各 Tab 说明
+## Tabs
 
-| Tab | 功能 |
-|-----|------|
-| 📊 矩形树图 | Treemap 可视化空间占比，双击目录树节点下钻 |
-| 📄 大文件 Top 100 | 按文件大小排序，双击打开所在目录 |
-| 📁 文件类型 | 按扩展名聚合统计，显示各类型占比 |
-| 📂 目录膨胀 | 列出所有子目录，按大小/文件数/子目录数排序，🟠标记"许多小文件"目录 |
-| 🧹 垃圾清理 | 扫描系统临时文件、缓存、日志等可清理项 |
+| Tab | Description |
+|-----|-------------|
+| 📊 Treemap | Visual size distribution; click a tree node to zoom in |
+| 📄 Big Files | Top 100 files by size; double-click to open location |
+| 📁 File Types | Aggregated by extension with share percentage |
+| 📂 Bloat | Subdirectories sorted by size/file count; 🟠 = many small files |
+| 🧹 Junk | Scan and list temporary files, caches, logs for cleanup |
 
-## 注意事项
+## Notes
 
-- 扫描 C 盘或大目录可能需要几十秒，取决于文件数量
-- 扫描时点击"停止"可以随时中断
-- 删除操作为**永久删除**（不经过回收站），操作前会弹出确认对话框
-- 垃圾清理扫描结果仅供查看，实际删除请在确认后手动操作
+- Scanning a large drive may take tens of seconds depending on file count
+- Click **Stop** to cancel a scan at any time
+- Deletion is **permanent** (bypasses Recycle Bin); a confirmation dialog will appear
+- Directories without read permission are shown as `🔒 (no access)` in the tree
+
+## License
+
+MIT
