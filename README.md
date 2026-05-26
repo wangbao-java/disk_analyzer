@@ -1,3 +1,5 @@
+[English](README.en.md) | 简体中文
+
 # Disk Analyzer - 磁盘空间分析工具
 
 一个跨平台的磁盘空间可视化分析与清理工具，基于 Python + tkinter 构建。
@@ -80,4 +82,3 @@ pyinstaller --onefile --windowed --name DiskAnalyzer disk_analyzer.py
 - 扫描时点击"停止"可以随时中断
 - 删除操作为**永久删除**（不经过回收站），操作前会弹出确认对话框
 - 垃圾清理扫描结果仅供查看，实际删除请在确认后手动操作
-
