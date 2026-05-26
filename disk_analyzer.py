@@ -57,17 +57,8 @@ def format_count(n: int) -> str:
 def is_system_hidden(path: str) -> bool:
     """判断文件/目录是否为系统隐藏（跳过扫描）。"""
     name = os.path.basename(path)
-    # 跳过常见的无意义目录
     if name.startswith(".") and name not in (".", ".."):
         return True
-    if os.name == "nt":
-        # Windows 隐藏属性
-        try:
-            attrs = os.stat(path).st_file_attributes
-            if attrs & stat.FILE_ATTRIBUTE_HIDDEN:
-                return True
-        except (AttributeError, OSError):
-            pass
     return False
 
 
@@ -97,7 +88,7 @@ def get_dir_size_fast(dirpath: str) -> tuple[int, int]:
 
 class DirNode:
     """目录树节点，存储扫描结果。"""
-    __slots__ = ("name", "path", "size", "file_count", "children", "is_dir")
+    __slots__ = ("name", "path", "size", "file_count", "children", "is_dir", "no_access")
 
     def __init__(self, name: str, path: str, is_dir: bool):
         self.name = name
@@ -106,6 +97,7 @@ class DirNode:
         self.file_count = 0
         self.children: list[DirNode] = []
         self.is_dir = is_dir
+        self.no_access = False
 
     def add_child(self, child: "DirNode"):
         self.children.append(child)
@@ -171,16 +163,14 @@ class DiskScanner(threading.Thread):
                         elif entry.is_dir(follow_symlinks=False):
                             if self.skip_hidden and is_system_hidden(entry.path):
                                 continue
-                            # 跳过部分系统目录（Windows）
-                            if os.name == "nt" and entry.name.lower() in ("system volume information", "$recycle.bin", "recovery"):
-                                continue
                             sub = self._scan_dir(entry.path, depth + 1)
                             if sub:
                                 node.add_child(sub)
                     except OSError:
                         pass
         except PermissionError:
-            pass
+            # 标记为无权限，保留节点让用户看到
+            node.no_access = True
         except OSError:
             pass
 
@@ -753,15 +743,21 @@ class DiskAnalyzerApp:
 
     def _populate_tree(self, node: DirNode, parent_id: str):
         """递归填充 Treeview。"""
-        if node.is_dir and not node.children:
-            return  # 空目录不显示
+        if node.is_dir and not node.children and not node.no_access:
+            return  # 空目录不显示（无权限目录保留）
 
         size_str = format_size(node.size)
+        name_text = node.name if node.name else node.path
         files_str = format_count(node.file_count) if node.is_dir else "1"
 
+        if node.no_access:
+            name_text = f"🔒 {name_text} (无权限)"
+            size_str = "无法访问"
+        elif node.is_dir and not node.children:
+            return  # 空目录不显示
         iid = self.tree.insert(
             parent_id, "end",
-            text=node.name if node.name else node.path,
+            text=name_text,
             values=(size_str, files_str),
             open=False
         )
